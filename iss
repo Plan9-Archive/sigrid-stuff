@@ -15,7 +15,7 @@ if(test $#* -lt 2){
 hget 'http://spotthestation.nasa.gov/sightings/view.cfm?country='^$country^'&region='^$region^'&city='^$city | awk '
 	BEGIN{
 		head=0
-		a[1] = 19
+		a[1] = 20
 		a[2] = 9
 		a[3] = 12
 		a[4] = 14
