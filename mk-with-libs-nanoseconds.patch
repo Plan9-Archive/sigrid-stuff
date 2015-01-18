@@ -1,0 +1,157 @@
+diff -wruiN a/mk/archive.c b/mk/archive.c
+--- a/mk/archive.c	2011-01-02 21:52:50.000000000 +0100
++++ b/mk/archive.c	2015-01-18 21:04:08.733489859 +0100
+@@ -41,11 +41,11 @@
+ 	}
+ 	return t;
+ }
+-long
++unsigned long long
+ atimeof(int force, char *name)
+ {
+ 	Symtab *sym;
+-	long t;
++	unsigned long long t;
+ 	char *archive, *member, buf[512];
+ 
+ 	archive = split(name, &member);
+@@ -100,12 +100,12 @@
+ 	if(symlook(name, S_TIME, 0)){
+ 		/* hoon off and change it in situ */
+ 		LSEEK(fd, SARMAG, 0);
+-		while(read(fd, (char *)&h, sizeof(h)) == sizeof(h)){
++		while(read(fd, &h, SAR_HDR) == SAR_HDR){
+ 			for(i = SARNAME-1; i > 0 && h.name[i] == ' '; i--)
+ 					;
+ 			h.name[i+1]=0;
+ 			if(strcmp(member, h.name) == 0){
+-				t = SARNAME-sizeof(h);	/* ughgghh */
++				t = SARNAME-SAR_HDR;	/* ughgghh */
+ 				LSEEK(fd, t, 1);
+ 				fprint(fd, "%-12ld", time(0));
+ 				break;
+@@ -122,7 +122,7 @@
+ atimes(char *ar)
+ {
+ 	struct ar_hdr h;
+-	long t;
++	unsigned long long t;
+ 	int fd, i, namelen;
+ 	char buf[2048], *p, *strings;
+ 	char name[1024];
+@@ -137,8 +137,8 @@
+ 		close(fd);
+ 		return;
+ 	}
+-	while(readn(fd, (char *)&h, sizeof(h)) == sizeof(h)){
+-		t = atol(h.date);
++	while(readn(fd, &h, SAR_HDR) == SAR_HDR){
++		t = atoll(h.date) * 1000000000LL;
+ 		if(t == 0)	/* as it sometimes happens; thanks ken */
+ 			t = 1;
+ 		namelen = 0;
+diff -wruiN a/mk/file.c b/mk/file.c
+--- a/mk/file.c	2011-01-02 21:52:50.000000000 +0100
++++ b/mk/file.c	2015-01-18 21:04:58.875315931 +0100
+@@ -2,17 +2,17 @@
+ 
+ /* table-driven version in bootes dump of 12/31/96 */
+ 
+-long
++unsigned long long
+ mtime(char *name)
+ {
+ 	return mkmtime(name);
+ }
+ 
+-long
++unsigned long long
+ timeof(char *name, int force)
+ {
+ 	Symtab *sym;
+-	long t;
++	unsigned long long t;
+ 
+ 	if(utfrune(name, '('))
+ 		return atimeof(force, name);	/* archive */
+@@ -61,12 +61,15 @@
+ void
+ timeinit(char *s)
+ {
+-	long t;
++	unsigned long long t;
++	struct timespec ts;
+ 	char *cp;
+ 	Rune r;
+ 	int c, n;
+ 
+-	t = time(0);
++	t = 0;
++	if(clock_gettime(CLOCK_REALTIME, &ts) == 0)
++		t = ts.tv_sec*1000000000LL + ts.tv_nsec;
+ 	while (*s) {
+ 		cp = s;
+ 		do{
+diff -wruiN a/mk/fns.h b/mk/fns.h
+--- a/mk/fns.h	2011-01-02 21:52:50.000000000 +0100
++++ b/mk/fns.h	2015-01-18 20:41:55.793053065 +0100
+@@ -6,7 +6,7 @@
+ void	addw(Word*, char*);
+ void	assert(char*, int);
+ int	assline(Biobuf *, Bufblock *);
+-long	atimeof(int,char*);
++unsigned long long	atimeof(int,char*);
+ void	atouch(char*);
+ void	bufcpy(Bufblock *, char *, int);
+ Envy	*buildenv(Job*, int);
+@@ -41,8 +41,8 @@
+ int	match(char*, char*, char*, Shell*);
+ char *membername(char*, int, char*);
+ void	mk(char*);
+-unsigned long	mkmtime(char*);
+-long	mtime(char*);
++unsigned long long	mkmtime(char*);
++unsigned long long	mtime(char*);
+ Arc	*newarc(Node*, Rule*, char*, Resub*);
+ Bufblock *newbuf(void);
+ Job	*newjob(Rule*, Node*, char*, char**, Word*, Word*, Word*, Word*);
+@@ -76,7 +76,7 @@
+ void	symstat(void);
+ void	symtraverse(int, void(*)(Symtab*));
+ void	timeinit(char*);
+-long	timeof(char*, int);
++unsigned long long	timeof(char*, int);
+ void	touch(char*);
+ void	update(int, Node*);
+ void	usage(void);
+diff -wruiN a/mk/mk.h b/mk/mk.h
+--- a/mk/mk.h	2011-01-02 21:52:50.000000000 +0100
++++ b/mk/mk.h	2015-01-18 21:07:20.671646434 +0100
+@@ -131,7 +131,7 @@
+ 	char		*name;
+ 	union {
+ 		void	*ptr;
+-		uintptr	value;
++		unsigned long long	value;
+ 	} u;
+ 	struct Symtab	*next;
+ } Symtab;
+diff -wruiN a/mk/unix.c b/mk/unix.c
+--- a/mk/unix.c	2011-01-02 21:52:50.000000000 +0100
++++ b/mk/unix.c	2015-01-18 20:42:13.322335666 +0100
+@@ -329,7 +329,7 @@
+ 	}
+ }
+ 
+-unsigned long
++unsigned long long
+ mkmtime(char *name)
+ {
+ 	struct stat st;
+@@ -337,5 +337,5 @@
+ 	if(stat(name, &st) < 0)
+ 		return 0;
+ 
+-	return st.st_mtime;
++	return st.st_mtim.tv_sec*1000000000LL + st.st_mtim.tv_nsec;
+ }

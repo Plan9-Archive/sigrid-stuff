@@ -1,3 +1,4 @@
 * iss - print ISS sightings timetable
 * addchartofont - insert a new char into the font
 * dubstep - play dubstep
+* mk-with-libs-nanoseconds.patch - nsec timestamps for mk-with-libs.tgz
