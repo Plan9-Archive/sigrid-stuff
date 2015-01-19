@@ -22,7 +22,7 @@ hget 'http://spotthestation.nasa.gov/sightings/view.cfm?country='^$country^'&reg
 		a[5] = 14
 	}
 	/<[\/]t[hd]>/ && !/Share/ {
-		gsub(/[ \t]*<[^>]*>[ \t]*/, "")
+		gsub(/[ \t]*<[^ >][^>]*>[ \t]*/, "")
 		sub(/&deg;/, "°")
 		if($0 != ""){
 			if(head > 3)
