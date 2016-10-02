@@ -1,2 +1,4 @@
 #!/bin/rc
+label dubstep
+echo hide > /dev/wctl
 play http://83.137.145.141:14280
