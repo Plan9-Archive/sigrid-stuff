@@ -17,9 +17,9 @@ hget 'http://spotthestation.nasa.gov/sightings/view.cfm?country='^$country^'&reg
 		head=0
 		a[1] = 20
 		a[2] = 9
-		a[3] = 12
-		a[4] = 14
-		a[5] = 14
+		a[3] = 13
+		a[4] = 16
+		a[5] = 16
 	}
 	/<[\/]t[hd]>/ && !/Share/ {
 		gsub(/[ \t]*<[^ >][^>]*>[ \t]*/, "")
